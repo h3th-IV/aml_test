@@ -19,7 +19,7 @@ func NewService(db *config.Database) *UserService {
 }
 
 func (us *UserService) CreateNewUser(ctx context.Context, name, email, gender, address, dob string) (*models.User, error) {
-	stmt, err := us.db.DB.Prepare("insert into users(name, email, gender, dob, address) valuex (?, ?, ?, ?, ?)")
+	stmt, err := us.db.DB.Prepare("insert into users(name, email, gender, dob, address) values (?, ?, ?, ?, ?)")
 	if err != nil {
 		return nil, err
 	}
