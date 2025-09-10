@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -26,8 +28,8 @@ func NewGetUserHandler(logger *zap.Logger, userService services.UserService) *Ge
 
 func (handler *GetUserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		handler.logger.Sugar().Error("epxecting method: %v, got method: %v", http.MethodPost, r.Method)
-		w.WriteHeader(http.StatusInternalServerError)
+		handler.logger.Sugar().Errorf("expecting method: %s, got: %s", http.MethodGet, r.Method)
+		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(APIResponse{
 			Success: false,
 			Message: "Method not allowed",
@@ -41,8 +43,8 @@ func (handler *GetUserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	wet_id := vars["id"]
 	id, err := strconv.Atoi(wet_id)
 	if err != nil {
-		handler.logger.Sugar().Error("Error contaning id generation")
-		w.WriteHeader(http.StatusInternalServerError)
+		handler.logger.Sugar().Error("error converting id type")
+		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(APIResponse{
 			Success: false,
 			Message: "An error occured while fetcing user",
@@ -53,7 +55,16 @@ func (handler *GetUserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 
 	user, err := handler.userService.GetuserById(r.Context(), id)
 	if err != nil {
-		handler.logger.Sugar().Error("Err fethcing the usrer from database")
+		if errors.Is(err, sql.ErrNoRows) {
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(APIResponse{
+				Success: false,
+				Message: "User not found",
+				Data:    nil,
+			})
+			return
+		}
+		handler.logger.Sugar().Error("Err fethcing the user from database")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(APIResponse{
 			Success: false,
@@ -63,10 +74,10 @@ func (handler *GetUserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(APIResponse{
 		Success: true,
-		Message: "User created successfully",
+		Message: "User fetched successfully",
 		Data:    user,
 	})
 }

@@ -26,7 +26,7 @@ type Location struct {
 	City        string      `json:"city"`
 	State       string      `json:"state"`
 	Country     string      `json:"country"`
-	Postcode    int         `json:"postcode"`
+	Postcode    any         `json:"postcode"`
 	Coordinates Coordinates `json:"coordinates"`
 	Timezone    Timezone    `json:"timezone"`
 }

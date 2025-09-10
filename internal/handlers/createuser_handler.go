@@ -1,25 +1,32 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
-	"github.com/h3th-IV/aml_test/internal/api"
+	"github.com/h3th-IV/aml_test/internal/models"
 	"github.com/h3th-IV/aml_test/internal/services"
 	"go.uber.org/zap"
 )
 
 var _ http.Handler = &CreateUserHandler{}
 
+type RandomUserFetcher interface {
+	FetchUser(ctx context.Context) (*models.User, error)
+}
+
 type CreateUserHandler struct {
 	logger      *zap.Logger
 	userService services.UserService
+	fetcher     RandomUserFetcher
 }
 
-func NewCreateUserHandler(logger *zap.Logger, userService services.UserService) *CreateUserHandler {
+func NewCreateUserHandler(logger *zap.Logger, userService services.UserService, fetcher RandomUserFetcher) *CreateUserHandler {
 	return &CreateUserHandler{
 		logger:      logger,
 		userService: userService,
+		fetcher:     fetcher,
 	}
 }
 
@@ -31,8 +38,8 @@ type APIResponse struct {
 
 func (handler *CreateUserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		handler.logger.Sugar().Error("epxecting method: %v, got method: %v", http.MethodPost, r.Method)
-		w.WriteHeader(http.StatusInternalServerError)
+		handler.logger.Sugar().Errorf("expecting method: %s, got: %s", http.MethodPost, r.Method)
+		w.WriteHeader(http.StatusMethodNotAllowed)
 		json.NewEncoder(w).Encode(APIResponse{
 			Success: false,
 			Message: "Method not allowed",
@@ -40,9 +47,8 @@ func (handler *CreateUserHandler) ServeHTTP(w http.ResponseWriter, r *http.Reque
 		})
 		return
 	}
-	apiClient := api.NewAPIClient("https://randomuser.me/api/")
 
-	user, err := apiClient.FetchUser(r.Context())
+	user, err := handler.fetcher.FetchUser(r.Context())
 	if err != nil {
 		handler.logger.Sugar().Error("err: ", err)
 		w.WriteHeader(http.StatusInternalServerError)

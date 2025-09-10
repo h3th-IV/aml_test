@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/h3th-IV/aml_test/internal/models"
 )
@@ -16,6 +17,9 @@ func (us *UserService) GetuserById(ctx context.Context, id int) (*models.User, e
 
 	err = stmt.QueryRowContext(ctx, id).Scan(&user.Id, &user.Name, &user.Email, &user.Gender, &user.Dob, &user.Address)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, sql.ErrNoRows
+		}
 		return nil, err
 	}
 	return &user, nil
